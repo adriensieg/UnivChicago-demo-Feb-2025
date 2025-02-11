@@ -1,44 +1,56 @@
 steps:
-  # Step 1: Build the Docker image
+  # Step 1: Build the Docker image for app-blue
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/myfirstalgo:$COMMIT_SHA', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/app-blue:$COMMIT_SHA', './app-blue']
 
-  # Step 2: Push the Docker image to Google Container Registry
+  # Step 2: Push the Docker image for app-blue
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/myfirstalgo:$COMMIT_SHA']
+    args: ['push', 'gcr.io/$PROJECT_ID/app-blue:$COMMIT_SHA']
 
-  # Step 3: Deploy the app to Cloud Run
+  # Step 3: Deploy app-blue to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
-      - 'myfirstalgo'
+      - 'app-blue'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/myfirstalgo:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/app-blue:$COMMIT_SHA'
       - '--platform'
       - 'managed'
       - '--region'
       - 'us-central1'
       - '--allow-unauthenticated'
-      
-    # Step 4: Make the service public
+
+  # Step 4: Build the Docker image for app-red
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/app-red:$COMMIT_SHA', './app-red']
+
+  # Step 5: Push the Docker image for app-red
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/app-red:$COMMIT_SHA']
+
+  # Step 6: Deploy app-red to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
-      - 'services'
-      - 'add-iam-policy-binding'
-      - '${_SERVICE_NAME}'
-      - '--region=${_REGION}'
-      - '--member=allUsers'
-      - '--role=roles/run.invoker'
+      - 'deploy'
+      - 'app-red'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/app-red:$COMMIT_SHA'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'us-central1'
+      - '--allow-unauthenticated'
 
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 
 substitutions:
-  _SERVICE_NAME: "myfirstalgo"
+  _SERVICE_NAME_BLUE: "app-blue"
+  _SERVICE_NAME_RED: "app-red"
   _REGION: "us-central1"
 
 timeout: 900s
