@@ -21,6 +21,18 @@ steps:
       - '--region'
       - 'us-central1'
       - '--allow-unauthenticated'
+      
+    # Step 4: Make the service public
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'add-iam-policy-binding'
+      - '${_SERVICE_NAME}'
+      - '--region=${_REGION}'
+      - '--member=allUsers'
+      - '--role=roles/run.invoker'
 
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
