@@ -101,7 +101,6 @@ steps:
         fi
 
   # Step 9: Create backend services
-# Step 9: Create backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -151,14 +150,15 @@ steps:
 
   # Step 11: Create URL map for routing
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-      - 'compute'
-      - 'url-maps'
-      - 'create'
-      - 'pretotype-url-map'
-      - '--default-service=app-red-backend'
-      - '--global'
+      - '-c'
+      - |
+        if ! gcloud compute url-maps describe pretotype-url-map --global &> /dev/null; then
+          gcloud compute url-maps create pretotype-url-map \
+            --default-service=app-red-backend \
+            --global
+        fi
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
@@ -171,7 +171,20 @@ steps:
       - '--default-service=app-red-backend'
       - '--path-rules=/blue-app=app-blue-backend,/red-app=app-red-backend'
 
-# Step 12: Create HTTPS proxy
+  # Step 12: Create SSL policy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if ! gcloud compute ssl-policies describe modern-ssl-policy --global &> /dev/null; then
+          gcloud compute ssl-policies create modern-ssl-policy \
+            --profile=MODERN \
+            --min-tls-version=1.2 \
+            --global
+        fi
+
+  # Step 13: Create HTTPS proxy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -185,32 +198,19 @@ steps:
             --ssl-policy=modern-ssl-policy
         fi
 
-# Add SSL policy creation before the HTTPS proxy
+  # Step 14: Create a forwarding rule
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        if ! gcloud compute ssl-policies describe modern-ssl-policy --global &> /dev/null; then
-          gcloud compute ssl-policies create modern-ssl-policy \
-            --profile=MODERN \
-            --min-tls-version=1.2 \
-            --global
+        if ! gcloud compute forwarding-rules describe pretotype-https-lb --global &> /dev/null; then
+          gcloud compute forwarding-rules create pretotype-https-lb \
+            --global \
+            --target-https-proxy=pretotype-https-proxy \
+            --ports=443 \
+            --address=lb-ipv4-1
         fi
-
-  # Step 13: Create a forwarding rule
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'compute'
-      - 'forwarding-rules'
-      - 'create'
-      - 'pretotype-https-lb'
-      - '--global'
-      - '--target-https-proxy=pretotype-https-proxy'
-      - '--ports=443'
-      - '--address=lb-ipv4-1'
-
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 
