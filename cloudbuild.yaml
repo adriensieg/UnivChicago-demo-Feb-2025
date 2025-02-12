@@ -100,22 +100,24 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
-      - 'compute'
-      - 'backend-services'
-      - 'create'
-      - 'app-blue-backend'
-      - '--global'
-      - '--protocol=HTTPS'
-
+    - 'compute'
+    - 'backend-services'
+    - 'create'
+    - 'app-blue-backend'
+    - '--global'
+    - '--load-balancing-scheme=EXTERNAL_MANAGED'
+    - '--no-port-name'
+  
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
-      - 'compute'
-      - 'backend-services'
-      - 'create'
-      - 'app-red-backend'
-      - '--global'
-      - '--protocol=HTTPS'
+    - 'compute'
+    - 'backend-services'
+    - 'create'
+    - 'app-red-backend'
+    - '--global'
+    - '--load-balancing-scheme=EXTERNAL_MANAGED'
+    - '--no-port-name'
 
   # Step 10: Attach NEGs to backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
