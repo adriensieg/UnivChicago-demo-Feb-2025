@@ -121,8 +121,7 @@ steps:
             --load-balancing-scheme=EXTERNAL_MANAGED
         fi
 
-
-  # Step 10: Attach NEGs to backend services
+# Step 10: Attach NEGs to backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -133,6 +132,8 @@ steps:
       - '--global'
       - '--network-endpoint-group=app-blue-neg'
       - '--network-endpoint-group-region=us-central1'
+      - '--no-connection-draining-timeout'  # Add this for serverless backends
+      - '--disable-health-checks'  # Add this for serverless backends
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
@@ -144,6 +145,8 @@ steps:
       - '--global'
       - '--network-endpoint-group=app-red-neg'
       - '--network-endpoint-group-region=us-central1'
+      - '--no-connection-draining-timeout'  # Add this for serverless backends
+      - '--disable-health-checks'  # Add this for serverless backends
 
   # Step 11: Create URL map for routing
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
