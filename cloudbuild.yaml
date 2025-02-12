@@ -1,13 +1,12 @@
 steps:
-  # Step 1: Build the Docker image for app-blue
+  # Step 1: Build and push Docker images for app-blue
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/app-blue:$COMMIT_SHA', './app-blue']
 
-  # Step 2: Push the Docker image for app-blue
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/app-blue:$COMMIT_SHA']
 
-  # Step 3: Deploy app-blue to Cloud Run
+  # Step 2: Deploy app-blue to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -22,15 +21,14 @@ steps:
       - 'us-central1'
       - '--allow-unauthenticated'
 
-  # Step 4: Build the Docker image for app-red
+  # Step 3: Build and push Docker images for app-red
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/app-red:$COMMIT_SHA', './app-red']
 
-  # Step 5: Push the Docker image for app-red
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'gcr.io/$PROJECT_ID/app-red:$COMMIT_SHA']
 
-  # Step 6: Deploy app-red to Cloud Run
+  # Step 4: Deploy app-red to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -45,12 +43,142 @@ steps:
       - 'us-central1'
       - '--allow-unauthenticated'
 
+  # Step 5: Reserve a static IP for the Load Balancer
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if ! gcloud compute addresses describe lb-ipv4-1 --global &> /dev/null; then
+          gcloud compute addresses create lb-ipv4-1 --global --ip-version=IPV4
+        fi
+
+  # Step 6: Enable required services
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'services'
+      - 'enable'
+      - 'run.googleapis.com'
+      - 'compute.googleapis.com'
+      - 'certificatemanager.googleapis.com'
+
+  # Step 7: Create Network Endpoint Groups (NEGs)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'network-endpoint-groups'
+      - 'create'
+      - 'app-blue-neg'
+      - '--region=us-central1'
+      - '--network-endpoint-type=SERVERLESS'
+      - '--cloud-run-service=app-blue'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'network-endpoint-groups'
+      - 'create'
+      - 'app-red-neg'
+      - '--region=us-central1'
+      - '--network-endpoint-type=SERVERLESS'
+      - '--cloud-run-service=app-red'
+
+  # Step 8: Create a managed SSL certificate
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if ! gcloud compute ssl-certificates describe pretotype-cert &> /dev/null; then
+          gcloud compute ssl-certificates create pretotype-cert --domains=pretotype.live
+        fi
+
+  # Step 9: Create backend services
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'backend-services'
+      - 'create'
+      - 'app-blue-backend'
+      - '--global'
+      - '--protocol=HTTPS'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'backend-services'
+      - 'create'
+      - 'app-red-backend'
+      - '--global'
+      - '--protocol=HTTPS'
+
+  # Step 10: Attach NEGs to backend services
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'backend-services'
+      - 'add-backend'
+      - 'app-blue-backend'
+      - '--global'
+      - '--network-endpoint-group=app-blue-neg'
+      - '--network-endpoint-group-region=us-central1'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'backend-services'
+      - 'add-backend'
+      - 'app-red-backend'
+      - '--global'
+      - '--network-endpoint-group=app-red-neg'
+      - '--network-endpoint-group-region=us-central1'
+
+  # Step 11: Create URL map for routing
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'url-maps'
+      - 'create'
+      - 'pretotype-url-map'
+      - '--default-service=app-red-backend'
+      - '--global'
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'url-maps'
+      - 'add-path-matcher'
+      - 'pretotype-url-map'
+      - '--path-matcher-name=path-routes'
+      - '--default-service=app-red-backend'
+      - '--path-rules=/blue-app=app-blue-backend,/red-app=app-red-backend'
+
+  # Step 12: Create HTTPS proxy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'target-https-proxies'
+      - 'create'
+      - 'pretotype-https-proxy'
+      - '--ssl-certificates=pretotype-cert'
+      - '--url-map=pretotype-url-map'
+
+  # Step 13: Create a forwarding rule
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'compute'
+      - 'forwarding-rules'
+      - 'create'
+      - 'pretotype-https-lb'
+      - '--global'
+      - '--target-https-proxy=pretotype-https-proxy'
+      - '--ports=443'
+      - '--address=lb-ipv4-1'
+
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 
 substitutions:
-  _SERVICE_NAME_BLUE: "app-blue"
-  _SERVICE_NAME_RED: "app-red"
   _REGION: "us-central1"
 
-timeout: 900s
+timeout: 1800s
