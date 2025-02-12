@@ -64,7 +64,6 @@ steps:
       - 'certificatemanager.googleapis.com'
 
   # Step 7: Create Network Endpoint Groups (NEGs)
-  # Step 7: Create Network Endpoint Groups (NEGs)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -101,26 +100,27 @@ steps:
 
   # Step 9: Create backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-    - 'compute'
-    - 'backend-services'
-    - 'create'
-    - 'app-blue-backend'
-    - '--global'
-    - '--load-balancing-scheme=EXTERNAL_MANAGED'
-    - '--no-port-name'
-  
+      - '-c'
+      - |
+        if ! gcloud compute backend-services describe app-blue-backend --global &> /dev/null; then
+          gcloud compute backend-services create app-blue-backend \
+            --global \
+            --load-balancing-scheme=EXTERNAL_MANAGED
+        fi
+
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-    - 'compute'
-    - 'backend-services'
-    - 'create'
-    - 'app-red-backend'
-    - '--global'
-    - '--load-balancing-scheme=EXTERNAL_MANAGED'
-    - '--no-port-name'
+      - '-c'
+      - |
+        if ! gcloud compute backend-services describe app-red-backend --global &> /dev/null; then
+          gcloud compute backend-services create app-red-backend \
+            --global \
+            --load-balancing-scheme=EXTERNAL_MANAGED
+        fi
+
 
   # Step 10: Attach NEGs to backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
