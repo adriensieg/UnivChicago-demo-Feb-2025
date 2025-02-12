@@ -94,11 +94,14 @@ steps:
     args:
       - '-c'
       - |
-        if ! gcloud compute ssl-certificates describe pretotype-cert &> /dev/null; then
-          gcloud compute ssl-certificates create pretotype-cert --domains=pretotype.live
+        if ! gcloud compute ssl-certificates describe pretotype-cert --global &> /dev/null; then
+          gcloud compute ssl-certificates create pretotype-cert \
+            --domains=pretotype.live \
+            --global
         fi
 
   # Step 9: Create backend services
+# Step 9: Create backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
@@ -107,7 +110,8 @@ steps:
         if ! gcloud compute backend-services describe app-blue-backend --global &> /dev/null; then
           gcloud compute backend-services create app-blue-backend \
             --global \
-            --load-balancing-scheme=EXTERNAL_MANAGED
+            --load-balancing-scheme=EXTERNAL_MANAGED \
+            --enable-cdn
         fi
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -118,7 +122,8 @@ steps:
         if ! gcloud compute backend-services describe app-red-backend --global &> /dev/null; then
           gcloud compute backend-services create app-red-backend \
             --global \
-            --load-balancing-scheme=EXTERNAL_MANAGED
+            --load-balancing-scheme=EXTERNAL_MANAGED \
+            --enable-cdn
         fi
 
   # Step 10: Attach NEGs to backend services
@@ -166,16 +171,32 @@ steps:
       - '--default-service=app-red-backend'
       - '--path-rules=/blue-app=app-blue-backend,/red-app=app-red-backend'
 
-  # Step 12: Create HTTPS proxy
+# Step 12: Create HTTPS proxy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-      - 'compute'
-      - 'target-https-proxies'
-      - 'create'
-      - 'pretotype-https-proxy'
-      - '--ssl-certificates=pretotype-cert'
-      - '--url-map=pretotype-url-map'
+      - '-c'
+      - |
+        if ! gcloud compute target-https-proxies describe pretotype-https-proxy --global &> /dev/null; then
+          gcloud compute target-https-proxies create pretotype-https-proxy \
+            --ssl-certificates=pretotype-cert \
+            --url-map=pretotype-url-map \
+            --global \
+            --ssl-policy=modern-ssl-policy
+        fi
+
+# Add SSL policy creation before the HTTPS proxy
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        if ! gcloud compute ssl-policies describe modern-ssl-policy --global &> /dev/null; then
+          gcloud compute ssl-policies create modern-ssl-policy \
+            --profile=MODERN \
+            --min-tls-version=1.2 \
+            --global
+        fi
 
   # Step 13: Create a forwarding rule
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
