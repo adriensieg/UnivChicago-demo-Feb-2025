@@ -55,6 +55,7 @@ steps:
 
   # Step 6: Enable required services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'services'
       - 'enable'
@@ -64,6 +65,7 @@ steps:
 
   # Step 7: Create Network Endpoint Groups (NEGs)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'network-endpoint-groups'
@@ -74,6 +76,7 @@ steps:
       - '--cloud-run-service=app-blue'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'network-endpoint-groups'
@@ -95,6 +98,7 @@ steps:
 
   # Step 9: Create backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'backend-services'
@@ -104,6 +108,7 @@ steps:
       - '--protocol=HTTPS'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'backend-services'
@@ -114,6 +119,7 @@ steps:
 
   # Step 10: Attach NEGs to backend services
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'backend-services'
@@ -124,6 +130,7 @@ steps:
       - '--network-endpoint-group-region=us-central1'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'backend-services'
@@ -135,6 +142,7 @@ steps:
 
   # Step 11: Create URL map for routing
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'url-maps'
@@ -144,6 +152,7 @@ steps:
       - '--global'
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'url-maps'
@@ -155,6 +164,7 @@ steps:
 
   # Step 12: Create HTTPS proxy
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'target-https-proxies'
@@ -165,6 +175,7 @@ steps:
 
   # Step 13: Create a forwarding rule
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
     args:
       - 'compute'
       - 'forwarding-rules'
