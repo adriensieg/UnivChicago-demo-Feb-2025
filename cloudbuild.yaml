@@ -125,28 +125,30 @@ steps:
             --enable-cdn
         fi
 
-  # Step 10: Attach NEGs to backend services
+  # Step 10: Attach NEGs to backend services (Check for health status before adding)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        gcloud compute backend-services get-health app-blue-backend --global || \
-        gcloud compute backend-services add-backend app-blue-backend \
-          --global \
-          --network-endpoint-group=app-blue-neg \
-          --network-endpoint-group-region=us-central1
+        if ! gcloud compute backend-services get-health app-blue-backend --global &> /dev/null; then
+          gcloud compute backend-services add-backend app-blue-backend \
+            --global \
+            --network-endpoint-group=app-blue-neg \
+            --network-endpoint-group-region=us-central1
+        fi
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        gcloud compute backend-services get-health app-red-backend --global || \
-        gcloud compute backend-services add-backend app-red-backend \
-          --global \
-          --network-endpoint-group=app-red-neg \
-          --network-endpoint-group-region=us-central1
+        if ! gcloud compute backend-services get-health app-red-backend --global &> /dev/null; then
+          gcloud compute backend-services add-backend app-red-backend \
+            --global \
+            --network-endpoint-group=app-red-neg \
+            --network-endpoint-group-region=us-central1
+        fi
 
   # Step 11: Create URL map for routing
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -211,6 +213,7 @@ steps:
             --ports=443 \
             --address=lb-ipv4-1
         fi
+
 options:
   default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
 
