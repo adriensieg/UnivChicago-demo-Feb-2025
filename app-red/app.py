@@ -7,7 +7,7 @@ def home():
     return render_template('index.html')
 
 @app.route('/red-app/')
-def home():
+def red_app():
     return render_template('index.html')
 
 if __name__ == '__main__':
