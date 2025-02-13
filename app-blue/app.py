@@ -3,12 +3,8 @@ import os
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
 @app.route('/blue-app/')
-def blue_app():  # Changed function name to avoid duplicate
+def home():  # Changed function name to avoid duplicate
     return render_template('index.html')
 
 if __name__ == '__main__':
